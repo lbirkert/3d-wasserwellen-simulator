@@ -411,11 +411,13 @@ const WaveMesh = ({
 
   // Dynamic resolution calculation
   const gridResolution = useMemo(() => {
-     const s = Math.round(Math.max(1, geometrySpeed));
+     // const s = Math.round(Math.max(1, geometrySpeed));
      // Formula: Res ~ 1/sqrt(speed)
-     const res = Math.floor(1600 / Math.sqrt(s));
-     return Math.max(400, Math.min(1600, res));
-  }, [geometrySpeed]);
+     // const res = Math.floor(1600 / Math.sqrt(s));
+     // return 2 * Math.max(400, Math.min(1600, res));
+
+     return 2000;
+  }, []);
 
   // Custom Geometry Generation
   const geometry = useMemo(() => {
