@@ -1,0 +1,47 @@
+name: Deploy Vite to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build the project
+        run: |
+          bun run build
+        env:
+          BASE_PATH: "/3d-wasserwellen-simulator"
+          VITE_PUBLIC_BASE_URL: "/3d-wasserwellen-simulator"
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3.0.0
+        with:
+          path: dist/
+
+      - name: Deploy GitHub Pages site
+        uses: actions/deploy-pages@v4.0.3
