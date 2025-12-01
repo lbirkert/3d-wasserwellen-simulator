@@ -42,6 +42,40 @@ enum AppMode {
   Params2D = 'params2d'  // Data Color, 2D Flat
 }
 
+// --- URL state (base64) helpers ---
+const base64Encode = (str: string) => {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+};
+
+const base64Decode = (b64: string) => {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes);
+};
+
+const encodeState = (obj: any) => {
+  try {
+    return base64Encode(JSON.stringify(obj));
+  } catch (e) {
+    return '';
+  }
+};
+
+const decodeState = (b64: string) => {
+  try {
+    const json = base64Decode(b64);
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+};
+
 // --- Shader Helper for Environment ---
 // Shared logic for Skybox and Water Reflection
 const skyColorLogic = `
@@ -411,13 +445,11 @@ const WaveMesh = ({
 
   // Dynamic resolution calculation
   const gridResolution = useMemo(() => {
-     // const s = Math.round(Math.max(1, geometrySpeed));
+     const s = Math.round(Math.max(1, geometrySpeed));
      // Formula: Res ~ 1/sqrt(speed)
-     // const res = Math.floor(1600 / Math.sqrt(s));
-     // return 2 * Math.max(400, Math.min(1600, res));
-
-     return 2000;
-  }, []);
+     const res = Math.floor(2000 / Math.sqrt(s));
+     return Math.max(400, Math.min(2000, res));
+  }, [geometrySpeed]);
 
   // Custom Geometry Generation
   const geometry = useMemo(() => {
@@ -729,6 +761,39 @@ const App = () => {
     }, 2000);
     return () => clearTimeout(handler);
   }, [globalSpeed]);
+
+  // Load state from URL hash (base64) on first mount
+  useEffect(() => {
+    try {
+      const raw = window.location.hash.slice(1);
+      if (!raw) return;
+      const data = decodeState(raw);
+      if (!data) return;
+
+      if (Array.isArray(data.sources)) {
+        setSources(data.sources.map((s: any) => ({ ...DEFAULT_SOURCE_PARAMS, ...s })));
+      }
+      if (typeof data.globalSpeed === 'number') setGlobalSpeed(data.globalSpeed);
+      if (data.appMode && Object.values(AppMode).includes(data.appMode)) setAppMode(data.appMode as AppMode);
+      if (typeof data.paramMode === 'number') setParamMode(data.paramMode);
+    } catch (e) {
+      // ignore malformed hash
+    }
+  }, []);
+
+  // Persist selected pieces of state to URL hash (debounced)
+  useEffect(() => {
+    const payload = { sources, globalSpeed, appMode, paramMode };
+    const b64 = encodeState(payload);
+    const timer = setTimeout(() => {
+      const newHash = b64 ? `#${b64}` : '';
+      console.debug('[state] persisting to hash', { newHash });
+      if (window.location.hash !== newHash) {
+        history.replaceState(null, '', window.location.pathname + window.location.search + newHash);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [sources, globalSpeed, appMode, paramMode]);
 
   const addSource = () => {
     if (sources.length >= MAX_SOURCES) return;
