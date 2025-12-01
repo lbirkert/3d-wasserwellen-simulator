@@ -4,6 +4,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, OrthographicCamera, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { Plus, Trash2, Play, Pause, RotateCcw, Menu, ChevronLeft, Dices, RefreshCw, Gauge, Activity, Waves as WavesIcon, Box, Layers, Eye, EyeOff } from 'lucide-react';
+import { deserializeSettings, SerializedState, serializeSettings } from './protobufHelpers';
 
 // --- Types & Constants ---
 
@@ -35,42 +36,92 @@ enum ParamMode {
   Phase = 4      // Mean Pairwise Phase Difference
 }
 
+export interface AppState {
+  sources: Array<{
+    id: string;
+    x: number;
+    y: number;
+    amplitude: number;
+    frequency: number;
+    phase: number;
+    visible: boolean;
+  }>;
+  globalSpeed: number;
+  appMode: AppMode;
+  paramMode: ParamMode;
+}
+
 // Main App Modes
 enum AppMode {
-  Waves = 'waves',       // Realistic Water Shader, 3D
-  Params3D = 'params3d', // Data Color, 3D Shaded
-  Params2D = 'params2d'  // Data Color, 2D Flat
+  Waves = 0,       // Realistic Water Shader, 3D
+  Params3D = 1, // Data Color, 3D Shaded
+  Params2D = 2  // Data Color, 2D Flat
 }
 
 // --- URL state (base64) helpers ---
-const base64Encode = (str: string) => {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(str);
+const SETTINGS_VERSION = 0x01;
+
+const base64EncodeBytes = (bytes: Uint8Array): string => {
   let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
   return btoa(binary);
 };
 
-const base64Decode = (b64: string) => {
+const base64DecodeBytes = (b64: string): Uint8Array => {
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const decoder = new TextDecoder();
-  return decoder.decode(bytes);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 };
 
-const encodeState = (obj: any) => {
+const convertState = (appState: AppState): SerializedState => {
+  return {
+    appMode: appState.appMode as number,
+    paramMode: appState.paramMode as number,
+    ...appState,
+  };
+};
+
+const deconvertState = (state: SerializedState): AppState => {
+  return {
+    appMode: state.appMode as AppMode,
+    paramMode: state.paramMode as ParamMode,
+    ...state,
+  };
+};
+
+const encodeState = (obj: AppState) => {
   try {
-    return base64Encode(JSON.stringify(obj));
+    const serialized = serializeSettings(convertState(obj));
+    // Prepend version byte
+    const withVersion = new Uint8Array(serialized.length + 1);
+    withVersion[0] = SETTINGS_VERSION;
+    withVersion.set(serialized, 1);
+    return base64EncodeBytes(withVersion);
   } catch (e) {
     return '';
   }
 };
 
-const decodeState = (b64: string) => {
+const decodeState = (b64: string): AppState | null => {
   try {
-    const json = base64Decode(b64);
-    return JSON.parse(json);
+    const bytes = base64DecodeBytes(b64);
+    if (bytes.length < 1) return null;
+    
+    const version = bytes[0];
+    if (version !== SETTINGS_VERSION) {
+      console.warn('[state] unsupported version:', version);
+      return null;
+    }
+    
+    const payload = bytes.slice(1);
+    const deserialized = deserializeSettings(payload);
+    if (!deserialized) return null;
+    return deconvertState(deserialized);
   } catch (e) {
     return null;
   }
