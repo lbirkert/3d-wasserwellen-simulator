@@ -12,7 +12,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-22.04, windows-latest]
+        include:
+          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest' # for Intel based macs.
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'ubuntu-22.04-arm' # Only available in public repos.
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     
@@ -24,12 +34,12 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-0
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v1
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-0 libjavascriptcoregtk-4.1-dev
+      
+      - name: setup node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: lts/*
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -40,41 +50,20 @@ jobs:
           workspaces: './app/src-tauri -> target'
 
       - name: Install root dependencies
-        run: bun install
+        run: npm install
 
       - name: Build root project
-        run: bun run build
+        run: npm run build
 
       - name: Install app dependencies
         working-directory: ./app
-        run: bun install
+        run: npm install
 
-      - name: Build the app
-        working-directory: ./app
-        run: bun tauri build --no-bundle
-  
-      - name: Rename executable for release
-        shell: bash
-        run: |
-          TAG="${{ github.ref_name }}"
-          PLATFORM="${{ matrix.platform }}"
-          DIR="app/src-tauri/target/release"
-
-          if [ -f "$DIR/wasser-wellensimulator.exe" ]; then
-            mv "$DIR/wasser-wellensimulator.exe" \
-               "$DIR/wasserwellen-simulator-${TAG}-${PLATFORM}.exe"
-          fi
-
-          if [ -f "$DIR/wasser-wellensimulator" ]; then
-            mv "$DIR/wasser-wellensimulator" \
-               "$DIR/wasserwellen-simulator-${TAG}-${PLATFORM}"
-          fi
-
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            app/src-tauri/target/release/wasserwellen-simulator-${{ github.ref_name }}-${{ matrix.platform }}*
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ github.event.release.id }}
+          args: ${{ matrix.args }}
+
 
