@@ -15,8 +15,8 @@ jobs:
         include:
           - platform: 'macos-latest' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
-          # - platform: 'macos-latest' # for Intel based macs.
-          #   args: '--target x86_64-apple-darwin' // todo
+          - platform: 'macos-latest' # for Intel based macs.
+            args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
           # - platform: 'ubuntu-22.04-arm' # Only available in public repos.
@@ -66,13 +66,21 @@ jobs:
         working-directory: ./app
         run: bun tauri build ${{ matrix.args }}
 
-      - name: Rename macOS files for release
-        if: matrix.platform == 'macos-latest'
+      - name: Rename macOS ARM files for release
+        if: matrix.args == '--target aarch64-apple-darwin'
         run: |
           mkdir upload
-          cp app/src-tauri/target/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos
-          tar -czvf upload/wasserwellen-simulator-${TAG}-macos.app.tar.gz app/src-tauri/target/release/bundle/macos/wasserwellen-simulator.app
-          zip -r upload/wasserwellen-simulator-${TAG}-macos.app.zip app/src-tauri/target/release/bundle/macos/wasserwellen-simulator.app
+          cp app/src-tauri/target/aarch64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-arm64
+          tar -czvf upload/wasserwellen-simulator-${TAG}-macos-arm64.app.tar.gz app/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/wasserwellen-simulator.app
+          zip -r upload/wasserwellen-simulator-${TAG}-macos-arm64.app.zip app/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/wasserwellen-simulator.app
+      
+      - name: Rename macOS x86_64 files for release
+        if: matrix.args == '--target x86_64-apple-darwin'
+        run: |
+          mkdir upload
+          cp app/src-tauri/target/x86_64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-x86_64
+          tar -czvf upload/wasserwellen-simulator-${TAG}-macos-x86_64.app.tar.gz app/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/wasserwellen-simulator.app
+          zip -r upload/wasserwellen-simulator-${TAG}-macos-x86_64.app.zip app/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/wasserwellen-simulator.app
       
       - name: Rename windows files for release
         if: matrix.platform == 'windows-latest'
