@@ -74,6 +74,7 @@ jobs:
           mkdir upload
           cp app/src-tauri/target/aarch64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-arm64
           cp -r app/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/wasserwellen-simulator.app upload/wasserwellen-simulator-${TAG}-macos-arm64.app
+          cp app/src-tauri/target/aarch64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-arm64.app/Contents/MacOS
           cd upload
           zip -r wasserwellen-simulator-${TAG}-macos-arm64.app.zip wasserwellen-simulator-${TAG}-macos-arm64.app
       
@@ -85,6 +86,7 @@ jobs:
           mkdir upload
           cp app/src-tauri/target/x86_64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-x86_64
           cp -r app/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/wasserwellen-simulator.app upload/wasserwellen-simulator-${TAG}-macos-x86_64.app
+          cp app/src-tauri/target/x86_64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-x86_64.app/Contents/MacOS
           cd upload
           zip -r wasserwellen-simulator-${TAG}-macos-x86_64.app.zip wasserwellen-simulator-${TAG}-macos-x86_64.app
       
