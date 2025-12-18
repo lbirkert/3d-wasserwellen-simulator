@@ -15,12 +15,12 @@ jobs:
         include:
           - platform: 'macos-latest' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # for Intel based macs.
-            args: '--target x86_64-apple-darwin'
+          # - platform: 'macos-latest' # for Intel based macs.
+          #   args: '--target x86_64-apple-darwin' // todo
           - platform: 'ubuntu-22.04'
             args: ''
-          - platform: 'ubuntu-22.04-arm' # Only available in public repos.
-            args: ''
+          # - platform: 'ubuntu-22.04-arm' # Only available in public repos.
+          #   args: '' // todo
           - platform: 'windows-latest'
             args: ''
 
@@ -36,10 +36,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev gdk-3.0
       
-      - name: setup node
-        uses: actions/setup-node@v4
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: lts/*
+          bun-version: latest
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable # Set this to dtolnay/rust-toolchain@nightly
@@ -53,20 +53,47 @@ jobs:
           workspaces: './app/src-tauri -> target'
 
       - name: Install root dependencies
-        run: npm install
+        run: bun install
 
       - name: Build root project
-        run: npm run build
+        run: bun run build
 
       - name: Install app dependencies
         working-directory: ./app
-        run: npm install
+        run: bun install
 
-      - uses: tauri-apps/tauri-action@v0
+      - shell: bash
+        run: tree app/src-tauri/target/release
+
+      - name: Rename macOS files for release
+        if: matrix.platform == 'macos-latest'
+        run: |
+          mkdir upload
+          cp app/src-tauri/target/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos
+          tar -czvf upload/wasserwellen-simulator-${TAG}-macos.app.tar.gz app/src-tauri/target/release/bundle/macos/wasserwellen-simulator.app
+          zip -r upload/wasserwellen-simulator-${TAG}-macos.app.zip app/src-tauri/target/release/bundle/macos/wasserwellen-simulator.app
+      
+      - name: Rename windows files for release
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir upload
+          cp app/src-tauri/target/release/wasserwellen-simulator.exe upload/wasserwellen-simulator-${TAG}-windows.exe
+          cp app/src-tauri/target/release/bundle/windows/wasserwellen-simulator.msi upload/wasserwellen-simulator-${TAG}-windows.msi
+      
+      - name: Rename linux files for release
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir upload
+          cp app/src-tauri/target/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-linux
+          cp app/src-tauri/target/release/bundle/linux/wasserwellen-simulator.AppImage upload/wasserwellen-simulator-${TAG}-linux.AppImage
+
+      - shell: bash
+        run: tree upload
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: upload/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          releaseId: ${{ github.event.release.id }}
-          args: ${{ matrix.args }}
-
-
