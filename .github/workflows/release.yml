@@ -88,14 +88,14 @@ jobs:
         run: |
           mkdir upload
           cp app/src-tauri/target/release/wasserwellen-simulator.exe upload/wasserwellen-simulator-${TAG}-windows.exe
-          cp app/src-tauri/target/release/bundle/windows/wasserwellen-simulator.msi upload/wasserwellen-simulator-${TAG}-windows.msi
+          cp app/src-tauri/target/release/bundle/msi/wasserwellen-simulator*.msi upload/wasserwellen-simulator-${TAG}-windows.msi
       
       - name: Rename linux files for release
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           mkdir upload
           cp app/src-tauri/target/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-linux
-          cp app/src-tauri/target/release/bundle/linux/wasserwellen-simulator.AppImage upload/wasserwellen-simulator-${TAG}-linux.AppImage
+          cp app/src-tauri/target/release/bundle/appimage/wasserwellen-simulator*.AppImage upload/wasserwellen-simulator-${TAG}-linux.AppImage
 
       - shell: bash
         run: ls upload
