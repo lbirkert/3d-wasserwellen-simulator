@@ -23,10 +23,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: 20
+          bun-version: latest
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -37,23 +37,41 @@ jobs:
           workspaces: './app/src-tauri -> target'
 
       - name: Install root dependencies
-        run: npm install
+        run: bun install
 
       - name: Build root project
-        run: npm run build
+        run: bun run build
 
-      - name: Install frontend dependencies
+      - name: Install app dependencies
         working-directory: ./app
-        run: npm install
+        run: bun install
 
       - name: Build the app
-        uses: tauri-apps/tauri-action@v0
+        working-directory: ./app
+        run: bun tauri build --no-bundle
+  
+      - name: Rename executable for release
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          PLATFORM="${{ matrix.platform }}"
+          DIR="app/src-tauri/target/release"
+
+          if [ -f "$DIR/wasser-wellensimulator.exe" ]; then
+            mv "$DIR/wasser-wellensimulator.exe" \
+               "$DIR/wasserwellen-simulator-${TAG}-${PLATFORM}.exe"
+          fi
+
+          if [ -f "$DIR/wasser-wellensimulator" ]; then
+            mv "$DIR/wasser-wellensimulator" \
+               "$DIR/wasserwellen-simulator-${TAG}-${PLATFORM}"
+          fi
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/src-tauri/target/release/wasserwellen-simulator-${{ github.ref_name }}-${{ matrix.platform }}*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: ./app
-          tagName: ${{ github.ref_name }}
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: false
-          prerelease: false
+
