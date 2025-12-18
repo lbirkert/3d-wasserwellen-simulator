@@ -62,6 +62,10 @@ jobs:
         working-directory: ./app
         run: bun install
 
+      - name: Build
+        working-directory: ./app
+        run: bun tauri build ${{ matrix.args }}
+
       - shell: bash
         run: tree app/src-tauri/target/release
 
