@@ -68,6 +68,8 @@ jobs:
 
       - name: Rename macOS ARM files for release
         if: matrix.args == '--target aarch64-apple-darwin'
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           mkdir upload
           cp app/src-tauri/target/aarch64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-arm64
@@ -77,6 +79,8 @@ jobs:
       
       - name: Rename macOS x86_64 files for release
         if: matrix.args == '--target x86_64-apple-darwin'
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           mkdir upload
           cp app/src-tauri/target/x86_64-apple-darwin/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-macos-x86_64
@@ -86,6 +90,8 @@ jobs:
       
       - name: Rename windows files for release
         if: matrix.platform == 'windows-latest'
+        env:
+          TAG: ${{ github.ref_name }}
         shell: bash
         run: |
           mkdir upload
@@ -94,6 +100,8 @@ jobs:
       
       - name: Rename linux files for release
         if: matrix.platform == 'ubuntu-22.04'
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           mkdir upload
           cp app/src-tauri/target/release/wasserwellen-simulator upload/wasserwellen-simulator-${TAG}-linux
